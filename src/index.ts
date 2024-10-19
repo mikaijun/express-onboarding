@@ -4,7 +4,6 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client'
 import { AuthenticatedRequest, authenticateToken } from './middleware/authenticate';
-import ts from 'typescript';
 
 dotenv.config();
 
@@ -12,6 +11,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const prisma = new PrismaClient()
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
+export const tokenBlacklist: Set<string> = new Set();
 
 app.use(express.json());
 
@@ -83,6 +83,16 @@ app.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res: Re
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve user profile' });
   }
+});
+
+app.post('/logout', authenticateToken, (req: Request, res: Response) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (token) {
+    tokenBlacklist.add(token);
+    res.status(200).json({ message: 'Logged out successfully' });
+    return;
+  }
+  res.status(400).json({ error: 'Token is required for logout' });
 });
 
 app.listen(port, () => {
